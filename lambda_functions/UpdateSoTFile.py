@@ -16,7 +16,7 @@ def lambda_handler(event, context):
     for obj in objs.get("Contents"):
         if obj['Key'].endswith('.parquet'):
             partitionNames.append(obj['Key'].split('=')[1].split('/')[0]+obj['Key'].split('=')[2].split('/')[0]+obj['Key'].split('=')[3].split('/')[0])
-    #limit to unique dates
+    #limit to unique dates only
     partitionNames=set(partitionNames)   
 
     #convert back to lists to iterate
