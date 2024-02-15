@@ -19,6 +19,7 @@ def lambda_handler(event, context):
     #get unique dates only
     partitionNames=set(partitionNames)   
 
+    #convert back to lists to iterate
     partitionNames=list(partitionNames)
 
     #convert date strings to dates
