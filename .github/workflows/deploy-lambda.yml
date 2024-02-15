@@ -27,7 +27,7 @@ jobs:
     - name: Print changed files # To properly debug what is being deployed (It can be removed).
       run: |
         echo "List of changed files:" 
-        echo $(git diff --name-only HEAD^ HEAD)
+        echo $(git diff-tree --no-commit-id --name-only -r HEAD --)
     - name: Deploy Modified Files
       run: |
         # Constants
