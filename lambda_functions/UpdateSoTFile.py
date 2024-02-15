@@ -19,11 +19,14 @@ def lambda_handler(event, context):
     #get unique dates only
     partitionNames=set(partitionNames)   
 
+
     partitionNames=list(partitionNames)
 
     #convert date strings to dates
     partitionNames=['-'.join([str(partitionNames[idx])[0:4],str(partitionNames[idx])[4:6],str(partitionNames[idx])[6:8]]) for idx in range(len(partitionNames))]
 
+    print(f'Total length of partitions are {len(partitionNames)}')
+    
     #convert to a JSON dict
     SoTPartitions={
         "Partitions": 
