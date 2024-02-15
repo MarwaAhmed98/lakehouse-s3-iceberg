@@ -18,7 +18,10 @@ def lambda_handler(event, context):
             partitionNames.append(obj['Key'].split('=')[1].split('/')[0]+obj['Key'].split('=')[2].split('/')[0]+obj['Key'].split('=')[3].split('/')[0])
     #get unique dates only
     partitionNames=set(partitionNames)   
+
     partitionNames=list(partitionNames)
+
+    #convert date strings to dates
     partitionNames=['-'.join([str(partitionNames[idx])[0:4],str(partitionNames[idx])[4:6],str(partitionNames[idx])[6:8]]) for idx in range(len(partitionNames))]
 
     #convert to a JSON dict
