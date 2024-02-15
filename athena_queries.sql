@@ -43,7 +43,7 @@ outputformat 'org.apache.hadoop.hive.ql.io.hiveignorekeytextoutputformat'
 location 's3://iceberg-cdc/sporting_event_cdc/2022/09/22/';
 
 --add partition
-alter table raw_tickets.sporting_event_cdc add partition (partition_date='2022-09-22') location 's3://iceberg-cdc/sporting_event_cdc/2022/09/22/';
+alter table raw_tickets.sporting_event_cdc add partition (partition_date='2022-09-22') location 's3://iceberg-cdc-prod/topics/event_tickets.raw_tickets.sporting_event/year=2022/month=09/day=21/';
 
 --check the table loaded properly 
 select * from raw_tickets.sporting_event_cdc;
@@ -63,41 +63,40 @@ home_team_id,
 away_team_id,
 cast(location_id as int) as location_id,
 cast(start_date_time as timestamp(6)) as start_date_time,
-start_date,
+cast(start_date as date) as start_date,
 cast(sold_out as int) as sold_out
 from raw_tickets.sporting_event;
 
 --iceberg acid transactions
-
 merge into curated_tickets.sporting_event t 
 using (
-select op,
+select __op,
 cdc_timestamp,
 id,
 sport_type_name,
 home_team_id,
 away_team_id,
 location_id,
-start_date_time,
-start_date,
+cast(from_iso8601_timestamp(start_date_time as timestamp) as start_date_time,
+cast(cast(from_iso8601_timestamp(start_date_time as timestamp) as date) as start_date,
 sold_out
-from raw_tickets.sporting_event_cdc 
-where partition_date='2022-09-22') s on t.id = s.id
-when matched and s.op='d' then delete
+from prod_event_tickets_raw_tickets_sporting_event
+where year='2022' and month='09' and day='21') s on t.id = s.id
+when matched and s.	__op='d' then delete
 when matched then update set sport_type_name = s.sport_type_name,
 home_team_id = s.home_team_id,
 location_id = s.location_id,
 start_date_time = s.start_date_time,
 start_date = s.start_date,
 sold_out = s.sold_out
-when not matched then insert (id,
+when not matched and s.	__op='c' then insert (id,
 sport_type_name,
 home_team_id,
 away_team_id,
 location_id,
 start_date_time,
-start_date)
-
+start_date
+)
 values
 (s.id,
 s.sport_type_name,
@@ -106,6 +105,7 @@ s.away_team_id,
 s.location_id,
 s.start_date_time,
 s.start_date);
+
 
 --check the operations worked, ticket id 21 should be deleted
 select * from curated_tickets.sporting_event where id in (1, 5, 11, 21);
@@ -132,7 +132,9 @@ select * from curated_tickets.view_sporting_event_previous_snapshot where id = 2
 --note that in athena you can wrap the table names in back quotes but not double quotes 
 
 --dropping old partitions
-alter table `sporting_event_cdc/sporting_event_cdc` drop partition(partition_date='2022') 
+alter table prod_event_tickets_raw_tickets_sporting_event drop partition(year='2022', month='09', day='21') 
+
+alter table prod_event_tickets_raw_tickets_sporting_event add partition(year='2022', month='09', day='21') 
 
 
 
@@ -161,3 +163,44 @@ sold_out
 from curated_tickets.sporting_event
 for timestamp as of current_timestamp + interval '-30' minute;
 
+
+
+create external table `prodevent_tickets_raw_tickets_sporting_event`(
+  `op` string comment '', 
+  `cdc_timestamp` string comment '', 
+  `id` bigint comment '', 
+  `sport_type_name` string comment '', 
+  `home_team_id` int comment '', 
+  `away_team_id` int comment '', 
+  `location_id` int comment '', 
+  `start_date_time` timestamp comment '', 
+  `start_date` date comment '', 
+  `sold_out` int comment '', 
+  `__deleted` string comment '', 
+  `__op` string comment '', 
+  `__source_ts_ms` bigint comment '', 
+  `ticket_status` string comment '')
+partitioned by ( 
+  `year` string comment '', 
+  `month` string comment '', 
+  `day` string comment '')
+row format serde 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.parquethiveserde' 
+stored as inputformat 
+  'org.apache.hadoop.hive.ql.io.parquet.mapredparquetinputformat' 
+outputformat 
+  'org.apache.hadoop.hive.ql.io.parquet.mapredparquetoutputformat'
+location
+  's3://iceberg-cdc-prod/topics/event_tickets.raw_tickets.sporting_event/'
+tblproperties (
+  'crawlerschemadeserializerversion'='1.0', 
+  'crawlerschemaserializerversion'='1.0', 
+  'updated_by_crawler'='tickets-cdc-data-prod', 
+  'averagerecordsize'='372', 
+  'classification'='parquet', 
+  'compressiontype'='none', 
+  'objectcount'='6', 
+  'partition_filtering.enabled'='true', 
+  'recordcount'='11', 
+  'sizekey'='25790', 
+  'typeofdata'='file')
