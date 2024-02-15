@@ -33,7 +33,7 @@ def lambda_handler(event, context):
     }
     toUploadtoS3=json.loads(json.dumps(SoTPartitions))#json.dumps() converts dict to string and then to use the json(dict) object use json.loads()
     
-    print(f'The length of Source of Truth file is {len(partitionNames)}')
+    #print(f'The length of Source of Truth file is {len(partitionNames)}')
 
     response=s3.put_object(
      Body=json.dumps(toUploadtoS3),
