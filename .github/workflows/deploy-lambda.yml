@@ -51,6 +51,7 @@ jobs:
                 echo "Content of $file after copying:"
                 cat lambda_env/$file
                 mv $file lambda_env/
+                echo "moved file"
             fi
         done
         # Zip the directory again
